@@ -50,7 +50,7 @@ jobs:
           xcodebuild build \
             -project PaperBoat.xcodeproj \
             -scheme PaperBoat \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
             -configuration Debug \
             -derivedDataPath build/ios \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
@@ -63,7 +63,7 @@ jobs:
           xcodebuild test \
             -project PaperBoat.xcodeproj \
             -scheme PaperBoat \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
             -only-testing:PaperBoatiOSTests \
             -derivedDataPath build/ios \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
@@ -76,7 +76,7 @@ jobs:
           xcodebuild test \
             -project PaperBoat.xcodeproj \
             -scheme PaperBoat \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
             -only-testing:PaperBoatUITests \
             -derivedDataPath build/ios \
             -resultBundlePath build/uitests.xcresult \
