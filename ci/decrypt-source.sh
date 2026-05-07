@@ -31,7 +31,7 @@ if [[ ! -e "$OUT_DIR/project.yml" ]]; then
 fi
 
 if [[ ! -e "$OUT_DIR/PaperBoatShared/Package.swift" ]]; then
-  echo "::warning::PaperBoatShared/Package.swift not present in the encrypted source; swift test step will fail. Re-encrypt from a dev environment that has Package.swift."
+  echo "::warning::PaperBoatShared/Package.swift is missing — xcodebuild cannot resolve the local Swift Package and the build will fail. Re-encrypt from a dev environment that has Package.swift."
 fi
 
 echo "Source decrypted into $OUT_DIR/"
