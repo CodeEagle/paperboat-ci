@@ -35,7 +35,7 @@ if [[ ! -f "$SOURCE_ROOT/project.yml" ]]; then
 fi
 
 if [[ ! -f "$SOURCE_ROOT/PaperBoatShared/Package.swift" ]]; then
-  echo "warning: $SOURCE_ROOT/PaperBoatShared/Package.swift is missing — CI 'swift test' will fail" >&2
+  echo "warning: $SOURCE_ROOT/PaperBoatShared/Package.swift is missing — xcodebuild will not be able to resolve the local Swift Package on CI" >&2
 fi
 
 WORK="$(mktemp -d)"
