@@ -1,0 +1,93 @@
+name: PaperBoat CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: iOS + macOS + Shared
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          sw_vers
+
+      - name: Decrypt source
+        env:
+          SOURCE_KEY: ${{ secrets.SOURCE_KEY }}
+        run: ./ci/decrypt-source.sh
+
+      - name: Install build tools
+        run: |
+          brew update >/dev/null
+          brew install xcodegen swiftformat xcbeautify
+
+      - name: Generate Xcode project
+        working-directory: src
+        run: xcodegen generate
+
+      - name: SwiftFormat lint check
+        working-directory: src
+        run: |
+          swiftformat --lint . || echo "::warning::SwiftFormat issues found"
+
+      - name: Test PaperBoatShared (Swift Package)
+        working-directory: src/PaperBoatShared
+        run: |
+          set -o pipefail
+          swift test --parallel 2>&1 | xcbeautify --renderer github-actions
+
+      - name: Build iOS (Debug)
+        working-directory: src
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project PaperBoat.xcodeproj \
+            -scheme PaperBoat \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -configuration Debug \
+            -derivedDataPath build/ios \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+
+      - name: Run PaperBoatiOSTests
+        working-directory: src
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project PaperBoat.xcodeproj \
+            -scheme PaperBoat \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -only-testing:PaperBoatiOSTests \
+            -derivedDataPath build/ios \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+
+      - name: Build macOS (Debug)
+        working-directory: src
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project PaperBoat.xcodeproj \
+            -scheme PaperBoat \
+            -destination 'platform=macOS' \
+            -configuration Debug \
+            -derivedDataPath build/macos \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+
+      - name: Cleanup decrypted source
+        if: always()
+        run: rm -rf src

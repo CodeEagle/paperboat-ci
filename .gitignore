@@ -1,0 +1,20 @@
+# Decrypted source must never be committed
+src/
+*.key
+key.txt
+.source-key
+.env
+
+# Tar / build leftovers
+*.tar
+*.tar.gz
+build/
+.build/
+DerivedData/
+.swiftpm/
+*.xcodeproj/
+.DS_Store
+
+# Editor / OS
+.vscode/
+.idea/
