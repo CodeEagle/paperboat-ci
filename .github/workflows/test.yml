@@ -69,6 +69,82 @@ jobs:
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
             | xcbeautify --renderer github-actions
 
+      - name: Run PaperBoatUITests (capture screenshots)
+        working-directory: src
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project PaperBoat.xcodeproj \
+            -scheme PaperBoat \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -only-testing:PaperBoatUITests \
+            -derivedDataPath build/ios \
+            -resultBundlePath build/uitests.xcresult \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+
+      - name: Extract screenshots from xcresult
+        if: always()
+        working-directory: src
+        run: |
+          set -euo pipefail
+          BUNDLE=build/uitests.xcresult
+          OUT=screenshots
+          mkdir -p "$OUT"
+          if [[ ! -d "$BUNDLE" ]]; then
+            echo "::warning::No xcresult bundle at $BUNDLE; skipping extraction"
+            exit 0
+          fi
+          # Walk every PNG/JPEG attachment in the bundle and copy it out under its filename.
+          # xcresulttool's JSON shape changes between Xcode versions; this uses --legacy for stability.
+          xcrun xcresulttool get --legacy --path "$BUNDLE" --format json > result.json
+          python3 - <<'PY'
+          import json, os, subprocess, re
+          with open('result.json') as f:
+              data = json.load(f)
+          out_dir = 'screenshots'
+          os.makedirs(out_dir, exist_ok=True)
+          def walk(node):
+              if isinstance(node, dict):
+                  if node.get('_type', {}).get('_name') == 'ActionTestAttachment':
+                      name = node.get('filename', {}).get('_value') or node.get('name', {}).get('_value') or 'attachment'
+                      uti  = node.get('uniformTypeIdentifier', {}).get('_value', '')
+                      ref  = node.get('payloadRef', {}).get('id', {}).get('_value')
+                      if ref and ('png' in uti or 'jpeg' in uti or 'plain-text' in uti or 'utf' in uti):
+                          safe = re.sub(r'[^A-Za-z0-9._-]', '_', name)
+                          path = os.path.join(out_dir, safe)
+                          subprocess.run(
+                              ['xcrun', 'xcresulttool', 'get', '--legacy',
+                               '--path', 'build/uitests.xcresult',
+                               '--id', ref, '--output-path', path],
+                              check=True
+                          )
+                          print(f'extracted {path}')
+                  for v in node.values():
+                      walk(v)
+              elif isinstance(node, list):
+                  for v in node:
+                      walk(v)
+          walk(data)
+          PY
+          ls -la "$OUT" || true
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: src/screenshots/
+          if-no-files-found: warn
+
+      - name: Upload xcresult bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uitests-xcresult
+          path: src/build/uitests.xcresult
+          if-no-files-found: warn
+
       - name: Build macOS (Debug)
         working-directory: src
         run: |
